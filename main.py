@@ -53,7 +53,7 @@ class Binary_Classifier():
         self.learning_rate = 0.001
         self.epochs = 500
         # Model , Optimizer, Loss
-        input_shape = [np.array(X_train).shape[1], np.array(X_train).shape[2], np.array(X_train).shape[3]]
+        input_shape = [np.array(self.X_train).shape[1], np.array(self.X_train).shape[2], np.array(self.X_train).shape[3]]
         self.model = model.CNN_Model(input_shape)
         self.optimizer = torch.optim.SGD(self.model.cuda().parameters(), lr = learning_rate, momentum = 0.9)
         self.criterion = nn.CrossEntropyLoss()
@@ -93,19 +93,19 @@ class Binary_Classifier():
                 self.X_validation.append(image)
                 self.Y_validation.append(0)
         for dog_test in glob.glob(DOG_TEST_SET):
+            image = cv2.imread(dog_test)  
             if ((image.shape[1], image.shape[0]) > (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
-            image = cv2.imread(dog_test)    
             self.X_test.append(image)
             self.Y_test.append(1)
         for cat_test in glob.glob(CAT_TEST_SET):
+            image = cv2.imread(cat_test)  
             if ((image.shape[1], image.shape[0]) > (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
-                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
-            image = cv2.imread(cat_test)    
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)  
             self.X_test.append(image)
             self.Y_test.append(0)
 

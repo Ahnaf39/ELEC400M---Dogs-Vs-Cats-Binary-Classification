@@ -67,10 +67,10 @@ class Binary_Classifier():
     def get_data(self):
         for dog_training in glob.glob(DOG_TRAINING_SET):
             image = cv2.imread(dog_training)
-            if ((image.shape[1], image.shape[0]) > (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_AREA)
-            elif ((image.shape[1], image.shape[0]) < (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_LINEAR)
+            if ((image.shape[1], image.shape[0]) > (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
+            elif ((image.shape[1], image.shape[0]) < (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
             # The total number of training images is 500, so 400 is taken for training set and 100 for validation
             # This is the dog set so we take 400 / 2 = 200     
             if (np.array(self.X_train).shape[0] < 200):
@@ -81,10 +81,10 @@ class Binary_Classifier():
                 self.Y_validation.append(1)
         for cat_training in glob.glob(CAT_TRAINING_SET):
             image = cv2.imread(cat_training)
-            if ((image.shape[1], image.shape[0]) > (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_AREA)
-            elif ((image.shape[1], image.shape[0]) < (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_LINEAR)   
+            if ((image.shape[1], image.shape[0]) > (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
+            elif ((image.shape[1], image.shape[0]) < (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)   
             # This is the cat set so we take the last 400 / 2 = 200
             if (np.array(self.X_train).shape[0] < 400):
                 self.X_train.append(image)
@@ -93,18 +93,18 @@ class Binary_Classifier():
                 self.X_validation.append(image)
                 self.Y_validation.append(0)
         for dog_test in glob.glob(DOG_TEST_SET):
-            if ((image.shape[1], image.shape[0]) > (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_AREA)
-            elif ((image.shape[1], image.shape[0]) < (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_LINEAR)
+            if ((image.shape[1], image.shape[0]) > (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
+            elif ((image.shape[1], image.shape[0]) < (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
             image = cv2.imread(dog_test)    
             self.X_test.append(image)
             self.Y_test.append(1)
         for cat_test in glob.glob(CAT_TEST_SET):
-            if ((image.shape[1], image.shape[0]) > (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_AREA)
-            elif ((image.shape[1], image.shape[0]) < (1024, 1024)):
-                image = cv2.resize(image, (1024, 1024), interpolation = cv2.INTER_LINEAR)
+            if ((image.shape[1], image.shape[0]) > (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
+            elif ((image.shape[1], image.shape[0]) < (256, 256)):
+                image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
             image = cv2.imread(cat_test)    
             self.X_test.append(image)
             self.Y_test.append(0)

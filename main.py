@@ -4,7 +4,11 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-import model
+from torch import cuda
+from timeit import default_timer as timer
+import cmodel
+from torchvision import models
+import pandas as pd
 from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import TensorDataset, DataLoader, sampler
@@ -31,11 +35,11 @@ class Binary_Classifier():
         self.X_test = self.scaler(self.X_test)
 
         # Datasets from folders
-        batch_size = 64
+        batch_size = 16
         # Transfer the data from numpy to tensor
         self.data = {
-            'train': TensorDataset(torch.from_numpy(self.X_train).float(), torch.from_numpy(self.Y_train).to(torch.long)),
-            'valid': TensorDataset(torch.from_numpy(self.X_validation).float(), torch.from_numpy(self.Y_validation).to(torch.long))
+            'train': TensorDataset(torch.permute(torch.from_numpy(self.X_train).float(), (0, 3, 1, 2)), torch.from_numpy(self.Y_train).to(torch.long)),
+            'valid': TensorDataset(torch.permute(torch.from_numpy(self.X_validation).float(), (0, 3, 1, 2)), torch.from_numpy(self.Y_validation).to(torch.long))
         }
 
         # Dataloader iterators
@@ -45,22 +49,28 @@ class Binary_Classifier():
         }
 
         trainiter = iter(self.dataloaders['train'])
-        features, labels = next(trainiter)
+        features, labels = trainiter.next()
         features.shape, labels.shape
+
+        validiter = iter(self.dataloaders['valid'])
+        features_valid, labels_valid = validiter.next()
+        features_valid.shape, labels_valid.shape
 
 
         #hyper parameters
         self.learning_rate = 0.001
         self.epochs = 500
         # Model , Optimizer, Loss
-        input_shape = [np.array(self.X_train).shape[1], np.array(self.X_train).shape[2], np.array(self.X_train).shape[3]]
-        self.model = model.CNN_Model(input_shape)
-        self.optimizer = torch.optim.SGD(self.model.cuda().parameters(), lr = learning_rate, momentum = 0.9)
+        device = torch.device('cuda')
+        self.model = cmodel.CNN_Model().to(device)
+        #self.model = models.vgg16().to(device)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr = self.learning_rate, momentum = 0.9)
         self.criterion = nn.CrossEntropyLoss()
 
         for p in self.optimizer.param_groups[0]['params']:
             if p.requires_grad:
                 print(p.shape)
+
 
 
 
@@ -122,6 +132,7 @@ class Binary_Classifier():
         print('Y_validation shape:', self.Y_validation.shape)
         print('Y_train shape:', self.Y_train.shape)
         print('Y_test shape:', self.Y_test.shape)
+    
     def scaler(self, array):
         array_transformed = np.zeros_like(array)
         for i in range(np.array(array).shape[3]):
@@ -138,8 +149,7 @@ class Binary_Classifier():
 
     def dog_cat_classifier(self):
         save_file_name = f'dog_v_cat_cnn_model.pt'
-        train_on_gpu = cuda.is_available()
-        history = self.train(save_file_name = save_file_name, max_epochs_stop = 3, n_epochs = 500, print_every = 1)
+        history = self.train(save_file_name)
 
         plt.figure(figsize=(8, 6))
         for c in ['train_loss', 'valid_loss']:
@@ -161,10 +171,7 @@ class Binary_Classifier():
         plt.title('Training and Validation Accuracy')
         plt.show()
 
-    def train(save_file_name,
-        max_epochs_stop = 3,
-        n_epochs = 500,
-        print_every = 1):
+    def train(self, save_file_name, max_epochs_stop = 50, n_epochs = 500, print_every = 1):
         """Train a PyTorch Model
 
         Params
@@ -211,7 +218,7 @@ class Binary_Classifier():
             start = timer()
 
             # Training loop
-            for ii, (data, target) in enumerate(self.dataloaders['train']):
+            for ii, (data, target) in enumerate(self.dataloaders['train'], 0):
                 
                 # Tensors to gpu, both model parameters, data, and target need to be tensors.
                 # You can use .cuda() function
@@ -244,10 +251,10 @@ class Binary_Classifier():
 
                 # Multiply average accuracy times the number of examples in batch
                 train_acc += accuracy.item() * data.size(0)
-
+                train_loader = self.dataloaders['train']
                 # Track training progress
                 print(
-                    f'Epoch: {epoch}\t{100 * (ii + 1) / len(self.train_loader):.2f}% complete. {timer() - start:.2f} seconds elapsed in epoch.',
+                    f'Epoch: {epoch}\t{100 * (ii + 1) / len(train_loader):.2f}% complete. {timer() - start:.2f} seconds elapsed in epoch.',
                     end='\r')
 
             # After training loops ends, start validation
@@ -260,7 +267,7 @@ class Binary_Classifier():
                 self.model.eval()
 
                 # Validation loop
-                for (data, target) in self.dataloaders['valid']:
+                for i, (data, target) in enumerate(self.dataloaders['valid'], 0):
                     # Tensors to gpu
                     data = data.to(device)
                     target = target.to(device)
@@ -277,19 +284,18 @@ class Binary_Classifier():
                     # Calculate validation accuracy
                     _, pred = torch.max(output, dim=1)
                     correct_tensor = pred.eq(target.data.view_as(pred))
-                    accuracy = torch.mean(
-                    correct_tensor.type(torch.FloatTensor))
+                    accuracy = torch.mean(correct_tensor.type(torch.FloatTensor))
 
                     # Multiply average accuracy times the number of examples
                     valid_acc += accuracy.item() * data.size(0)
 
 
             # Calculate average losses and Calculate average accuracy
-            train_loss = train_loss / len(self.train_loader.dataset)
-            valid_loss = valid_loss / len(self.valid_loader.dataset)
+            train_loss = train_loss / len(self.dataloaders['train'].dataset)
+            valid_loss = valid_loss / len(self.dataloaders['valid'].dataset)
 
-            train_acc = train_acc / len(self.train_loader.dataset)
-            valid_acc = valid_acc / len(self.valid_loader.dataset)
+            train_acc = train_acc / len(self.dataloaders['train'].dataset)
+            valid_acc = valid_acc / len(self.dataloaders['valid'].dataset)
 
             history.append([train_loss, valid_loss, train_acc, valid_acc])
 
@@ -330,6 +336,7 @@ class Binary_Classifier():
 
                     # Load the best state dict
                     # You can use model.load_state_dict()
+                    self.model = model.CNN_Model().to(device)
                     self.model.load_state_dict(torch.load(save_file_name))
 
                     # Attach the optimizer

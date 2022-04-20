@@ -13,6 +13,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import TensorDataset, DataLoader, sampler
 from PIL import Image
+import random
 
 DOG_TRAINING_SET = "./dogvscat/train/1/*.jpg"
 CAT_TRAINING_SET = "./dogvscat/train/0/*.jpg"
@@ -73,7 +74,13 @@ class Binary_Classifier():
               print(p.shape)
 
     def get_data(self):
-      for i, dog_training in enumerate(glob.glob(DOG_TRAINING_SET), 0):
+      dog_train_files = glob.glob(DOG_TRAINING_SET)
+      random.shuffle(dog_train_files)
+      print(len(dog_train_files))
+      cat_train_files = glob.glob(CAT_TRAINING_SET)
+      random.shuffle(cat_train_files)
+      print(len(cat_train_files))
+      for dog_training in dog_train_files:
         try:
           img = Image.open(dog_training).convert("RGB") #1
           image = cv2.imread(dog_training)
@@ -94,7 +101,7 @@ class Binary_Classifier():
                 self.Y_validation.append(1)
         except:
           pass
-      for cat_training in glob.glob(CAT_TRAINING_SET):
+      for cat_training in cat_train_files:
         try:
           img = Image.open(cat_training).convert("RGB") #1
           image = cv2.imread(cat_training)
@@ -279,9 +286,7 @@ class Binary_Classifier():
               train_acc += accuracy.item() * data.size(0)
               train_loader = self.dataloaders['train']
               # Track training progress
-              print(
-                  f'Epoch: {epoch}\t{100 * (ii + 1) / len(train_loader):.2f}% complete. {timer() - start:.2f} seconds elapsed in epoch.',
-                  end='\r')
+              print(f'Epoch: {epoch}\t{100 * (ii + 1) / len(train_loader):.2f}% complete. {timer() - start:.2f} seconds elapsed in epoch.', end='\r')
 
           # After training loops ends, start validation
           self.model.epochs += 1
@@ -362,7 +367,7 @@ class Binary_Classifier():
 
                   # Load the best state dict
                   # You can use model.load_state_dict()
-                  self.model = model.CNN_Model().to(device)
+                  self.model = cmodel.CNN_Model().to(device)
                   self.model.load_state_dict(torch.load(save_file_name))
 
                   # Attach the optimizer

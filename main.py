@@ -84,9 +84,9 @@ class Binary_Classifier():
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
-            # The total number of training images is 25000, so 20000 is taken for training set and 100 for validation
-            # This is the dog set so we take 20000 / 2 = 10000     
-            if (np.array(self.X_train).shape[0] < 10000):
+            # The total number of training images is 3000, so 2400 is taken for training set and 100 for validation
+            # This is the dog set so we take 2400 / 2 = 1200     
+            if (np.array(self.X_train).shape[0] < 1200):
                 self.X_train.append(image)
                 self.Y_train.append(1)
             else:
@@ -105,8 +105,8 @@ class Binary_Classifier():
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)   
-            # This is the cat set so we take the last 20000 / 2 = 10000
-            if (np.array(self.X_train).shape[0] < 20000):
+            # This is the cat set so we take the last 2400 / 2 = 1200
+            if (np.array(self.X_train).shape[0] < 2400):
                 self.X_train.append(image)
                 self.Y_train.append(0)
             else:

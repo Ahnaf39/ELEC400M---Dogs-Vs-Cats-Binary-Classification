@@ -11,9 +11,12 @@ from torchvision import models
 import pandas as pd
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.data import TensorDataset, DataLoader, sampler
+from torch.utils.data import TensorDataset, DataLoader, sampler, ConcatDataset
 from PIL import Image
 import random
+import albumentations as A
+from sklearn.model_selection import StratifiedKFold
+
 
 DOG_TRAINING_SET = "./dogvscat/train/1/*.jpg"
 CAT_TRAINING_SET = "./dogvscat/train/0/*.jpg"
@@ -50,6 +53,7 @@ class Binary_Classifier():
           'valid': DataLoader(self.data['valid'], batch_size = batch_size, shuffle = False, num_workers = 2)
       }
 
+
       trainiter = iter(self.dataloaders['train'])
       features, labels = trainiter.next()
       features.shape, labels.shape
@@ -74,6 +78,11 @@ class Binary_Classifier():
               print(p.shape)
 
     def get_data(self):
+      transform = A.Compose([
+        A.RandomCrop(width=256, height=256),
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(p=0.2),
+      ])
       dog_train_files = glob.glob(DOG_TRAINING_SET)
       random.shuffle(dog_train_files)
       print(len(dog_train_files))
@@ -84,6 +93,7 @@ class Binary_Classifier():
         try:
           img = Image.open(dog_training).convert("RGB") #1
           image = cv2.imread(dog_training)
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
           if(image is None):
             continue
           else:
@@ -91,20 +101,27 @@ class Binary_Classifier():
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)
-            # The total number of training images is 3000, so 2400 is taken for training set and 100 for validation
-            # This is the dog set so we take 2400 / 2 = 1200     
-            if (np.array(self.X_train).shape[0] < 1200):
+            # The total number of training images is 3000 * 2, so 4800 is taken for training set and 100 for validation
+            # This is the dog set so we take 4800 / 2 = 2400     
+            transformed = transform(image=image)["image"] #transformed image
+            if (np.array(self.X_train).shape[0] < 2400):
                 self.X_train.append(image)
+                self.X_train.append(transformed)
+                self.Y_train.append(1)
                 self.Y_train.append(1)
             else:
                 self.X_validation.append(image)
+                self.X_validation.append(transformed)
                 self.Y_validation.append(1)
+                self.Y_validation.append(1)
+
         except:
           pass
       for cat_training in cat_train_files:
         try:
           img = Image.open(cat_training).convert("RGB") #1
           image = cv2.imread(cat_training)
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
           if(image is None):
             continue
           else:
@@ -112,12 +129,17 @@ class Binary_Classifier():
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_AREA)
             elif ((image.shape[1], image.shape[0]) < (256, 256)):
                 image = cv2.resize(image, (256, 256), interpolation = cv2.INTER_LINEAR)   
-            # This is the cat set so we take the last 2400 / 2 = 1200
-            if (np.array(self.X_train).shape[0] < 2400):
+            transformed = transform(image=image)["image"] #transformed image
+            # This is the cat set so we take the last 4800 / 2 = 2400
+            if (np.array(self.X_train).shape[0] < 4800):
                 self.X_train.append(image)
+                self.Y_train.append(0)
+                self.X_train.append(transformed)
                 self.Y_train.append(0)
             else:
                 self.X_validation.append(image)
+                self.Y_validation.append(0)
+                self.X_validation.append(transformed)
                 self.Y_validation.append(0)
         except:
           pass
@@ -125,6 +147,7 @@ class Binary_Classifier():
         try:
           img = Image.open(dog_test).convert("RGB") #1
           image = cv2.imread(dog_test)
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
           if(image is None):
             continue  
           else:
@@ -140,6 +163,7 @@ class Binary_Classifier():
         try:
           img = Image.open(cat_test).convert("RGB") #1
           image = cv2.imread(cat_test)
+          image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
           if(image is None):
             continue
           else:  
@@ -204,7 +228,7 @@ class Binary_Classifier():
       plt.title('Training and Validation Accuracy')
       plt.show()
 
-    def train(self, save_file_name, max_epochs_stop = 50, n_epochs = 500, print_every = 1):
+    def train(self, save_file_name, max_epochs_stop = 10, n_epochs = 500, print_every = 1):
       """Train a PyTorch Model
 
       Params
